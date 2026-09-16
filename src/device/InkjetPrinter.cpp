@@ -3,6 +3,7 @@
 
 InkjetPrinter::InkjetPrinter()
 {
+    this->inkAmount = 100;
 }
 
 void InkjetPrinter::print()
@@ -17,4 +18,19 @@ void InkjetPrinter::print(int copies)
               << copies
               << "部印刷します"
               << std::endl;
+}
+
+int InkjetPrinter::getRemainingAmount() const
+{
+    return this->inkAmount;
+}
+
+void InkjetPrinter::consumeAmount(int amount)
+{
+    this->inkAmount -= amount;
+
+    if (this->inkAmount < 0)
+    {
+        this->inkAmount = 0;
+    }
 }

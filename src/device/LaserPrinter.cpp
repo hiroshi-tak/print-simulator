@@ -3,6 +3,7 @@
 
 LaserPrinter::LaserPrinter()
 {
+    this->tonerAmount = 100;
 }
 
 void LaserPrinter::print()
@@ -17,4 +18,19 @@ void LaserPrinter::print(int copies)
               << copies
               << "部印刷します"
               << std::endl;
+}
+
+int LaserPrinter::getRemainingAmount() const
+{
+    return this->tonerAmount;
+}
+
+void LaserPrinter::consumeAmount(int amount)
+{
+    this->tonerAmount -= amount;
+
+    if (this->tonerAmount < 0)
+    {
+        this->tonerAmount = 0;
+    }
 }

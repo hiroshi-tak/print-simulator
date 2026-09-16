@@ -26,6 +26,9 @@ public:
     void setPaperDetected(bool detected);
     void setPaperJamDetected(bool detected);
 
+    int getRemainingAmount() const;
+    bool consumePrintAmount(int amount);
+
 private:
     PrinterState state;
     PrinterError error;

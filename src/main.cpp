@@ -80,6 +80,13 @@ int main()
               << printer.isMotorRunning()
               << std::endl;
 
+    std::cout << "=== 残量確認 ==="
+              << std::endl;
+
+    std::cout << "残量: "
+              << printer.getRemainingAmount()
+              << std::endl;
+
     std::cout << std::endl;
 
     // =========================
@@ -124,6 +131,15 @@ int main()
 
     std::cout << "モーター: "
               << printer.isMotorRunning()
+              << std::endl;
+
+    std::cout << "=== 印刷による消費 ==="
+              << std::endl;
+
+    printer.consumePrintAmount(50);
+
+    std::cout << "残量: "
+              << printer.getRemainingAmount()
               << std::endl;
 
     return 0;

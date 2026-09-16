@@ -82,3 +82,21 @@ void Printer::setPaperJamDetected(bool detected)
         this->setError(PrinterError::PAPER_JAM);
     }
 }
+
+int Printer::getRemainingAmount() const
+{
+    return this->device->getRemainingAmount();
+}
+
+bool Printer::consumePrintAmount(int amount)
+{
+    if (this->device->getRemainingAmount() < amount)
+    {
+        this->setError(PrinterError::INK_EMPTY);
+        return false;
+    }
+
+    this->device->consumeAmount(amount);
+
+    return true;
+}
