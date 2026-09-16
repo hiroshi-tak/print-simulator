@@ -1,5 +1,4 @@
 build/
-printer
 *.o
 *.out
 *.exe
