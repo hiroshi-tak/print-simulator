@@ -16,6 +16,29 @@ const char *stateToString(PrinterState state)
 
     case PrinterState::STOPPED:
         return "STOPPED";
+
+    case PrinterState::ERROR:
+        return "ERROR";
+    }
+
+    return "UNKNOWN";
+}
+
+const char *errorToString(PrinterError error)
+{
+    switch (error)
+    {
+    case PrinterError::NONE:
+        return "NONE";
+
+    case PrinterError::PAPER_JAM:
+        return "PAPER_JAM";
+
+    case PrinterError::NO_PAPER:
+        return "NO_PAPER";
+
+    case PrinterError::INK_EMPTY:
+        return "INK_EMPTY";
     }
 
     return "UNKNOWN";
@@ -71,6 +94,35 @@ int main()
 
     std::cout << "印刷完了後: "
               << stateToString(laserPrinter.getState())
+              << std::endl;
+
+    std::cout << std::endl;
+
+    std::cout << "=== エラー発生 ==="
+              << std::endl;
+
+    inkjetPrinter.setError(PrinterError::PAPER_JAM);
+
+    std::cout << "状態: "
+              << stateToString(inkjetPrinter.getState())
+              << std::endl;
+
+    std::cout << "エラー: "
+              << errorToString(inkjetPrinter.getError())
+              << std::endl;
+
+    std::cout << "モーター: "
+              << inkjetPrinter.isMotorRunning()
+              << std::endl;
+
+    inkjetPrinter.clearError();
+
+    std::cout << "エラー解除後: "
+              << stateToString(inkjetPrinter.getState())
+              << std::endl;
+
+    std::cout << "エラー: "
+              << errorToString(inkjetPrinter.getError())
               << std::endl;
 
     return 0;

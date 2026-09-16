@@ -3,6 +3,7 @@
 Printer::Printer(PrinterDevice *device)
 {
     this->state = PrinterState::IDLE;
+    this->error = PrinterError::NONE;
     this->device = device;
 }
 
@@ -44,7 +45,30 @@ PrinterState Printer::getState() const
     return this->state;
 }
 
+PrinterError Printer::getError() const
+{
+    return this->error;
+}
+
+void Printer::setError(PrinterError error)
+{
+    this->error = error;
+    this->state = PrinterState::ERROR;
+    this->motor.stop();
+}
+
+void Printer::clearError()
+{
+    this->error = PrinterError::NONE;
+    this->state = PrinterState::IDLE;
+}
+
 bool Printer::isMotorRunning() const
 {
     return this->motor.isRunning();
+}
+
+void Printer::setPaperDetected(bool detected)
+{
+    this->sensor.setPaperDetected(detected);
 }
