@@ -72,3 +72,13 @@ void Printer::setPaperDetected(bool detected)
 {
     this->sensor.setPaperDetected(detected);
 }
+
+void Printer::setPaperJamDetected(bool detected)
+{
+    this->sensor.setPaperJamDetected(detected);
+
+    if (detected)
+    {
+        this->setError(PrinterError::PAPER_JAM);
+    }
+}

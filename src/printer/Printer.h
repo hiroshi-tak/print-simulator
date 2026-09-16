@@ -24,11 +24,12 @@ public:
     bool isMotorRunning() const;
 
     void setPaperDetected(bool detected);
+    void setPaperJamDetected(bool detected);
 
 private:
     PrinterState state;
     PrinterError error;
-    
+
     Motor motor;
     Sensor sensor;
     PrinterDevice *device;

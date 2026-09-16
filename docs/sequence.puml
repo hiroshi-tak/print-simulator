@@ -24,14 +24,31 @@ Device --> Printer : return
 
 Printer --> User : 印刷開始
 
-User -> Printer : finishPrint()
+== 紙詰まり発生 ==
+
+User -> Printer : setPaperJamDetected(true)
+
+Printer -> Sensor : setPaperJamDetected(true)
+Sensor -> Sensor : paperJamDetected = true
+Sensor --> Printer : return
+
+Printer -> Printer : setError(PAPER_JAM)
 
 Printer -> Motor : stop()
 Motor -> Motor : running = false
 Motor --> Printer : return
 
+Printer -> Printer : state = ERROR
+
+Printer --> User : 紙詰まり・印刷停止
+
+== エラー解除 ==
+
+User -> Printer : clearError()
+
+Printer -> Printer : error = NONE
 Printer -> Printer : state = IDLE
 
-Printer --> User : 印刷完了
+Printer --> User : エラー解除
 
 @enduml

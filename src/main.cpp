@@ -42,87 +42,88 @@ const char *errorToString(PrinterError error)
     }
 
     return "UNKNOWN";
+
 }
 
 int main()
 {
     InkjetPrinter inkjet;
-    Printer inkjetPrinter(&inkjet);
+    Printer printer(&inkjet);
 
-    std::cout << "=== インクジェットプリンター ==="
-              << std::endl;
-
-    std::cout << "初期状態: "
-              << stateToString(inkjetPrinter.getState())
-              << std::endl;
-
-    inkjetPrinter.startPrint();
-
-    std::cout << "印刷状態: "
-              << stateToString(inkjetPrinter.getState())
-              << std::endl;
-
-    std::cout << "モーター: "
-              << inkjetPrinter.isMotorRunning()
-              << std::endl;
-
-    inkjetPrinter.finishPrint();
-
-    std::cout << "印刷完了後: "
-              << stateToString(inkjetPrinter.getState())
-              << std::endl;
-
-    std::cout << std::endl;
-
-    LaserPrinter laser;
-    Printer laserPrinter(&laser);
-
-    std::cout << "=== レーザープリンター ==="
-              << std::endl;
-
-    laserPrinter.startPrint();
-
-    std::cout << "印刷状態: "
-              << stateToString(laserPrinter.getState())
-              << std::endl;
-
-    std::cout << "モーター: "
-              << laserPrinter.isMotorRunning()
-              << std::endl;
-
-    laserPrinter.finishPrint();
-
-    std::cout << "印刷完了後: "
-              << stateToString(laserPrinter.getState())
-              << std::endl;
-
-    std::cout << std::endl;
-
-    std::cout << "=== エラー発生 ==="
-              << std::endl;
-
-    inkjetPrinter.setError(PrinterError::PAPER_JAM);
+    std::cout << "=== 初期状態 ==="
+                  << std::endl;
 
     std::cout << "状態: "
-              << stateToString(inkjetPrinter.getState())
+              << stateToString(printer.getState())
               << std::endl;
 
     std::cout << "エラー: "
-              << errorToString(inkjetPrinter.getError())
+              << errorToString(printer.getError())
+              << std::endl;
+
+    std::cout << std::endl;
+
+    // =========================
+    // 印刷開始
+    // =========================
+
+    std::cout << "=== 印刷開始 ==="
+              << std::endl;
+
+    printer.startPrint();
+
+    std::cout << "状態: "
+              << stateToString(printer.getState())
               << std::endl;
 
     std::cout << "モーター: "
-              << inkjetPrinter.isMotorRunning()
+              << printer.isMotorRunning()
               << std::endl;
 
-    inkjetPrinter.clearError();
+    std::cout << std::endl;
 
-    std::cout << "エラー解除後: "
-              << stateToString(inkjetPrinter.getState())
+    // =========================
+    // 紙詰まり発生
+    // =========================
+
+    std::cout << "=== 紙詰まり発生 ==="
+              << std::endl;
+
+    printer.setPaperJamDetected(true);
+
+    std::cout << "状態: "
+              << stateToString(printer.getState())
               << std::endl;
 
     std::cout << "エラー: "
-              << errorToString(inkjetPrinter.getError())
+              << errorToString(printer.getError())
+              << std::endl;
+
+    std::cout << "モーター: "
+              << printer.isMotorRunning()
+              << std::endl;
+
+    std::cout << std::endl;
+
+    // =========================
+    // エラー解除
+    // =========================
+
+    std::cout << "=== エラー解除 ==="
+              << std::endl;
+
+    printer.clearError();
+
+    std::cout << "状態: "
+              << stateToString(printer.getState())
+              << std::endl;
+
+    std::cout << "エラー: "
+              << errorToString(printer.getError())
+              << std::endl;
+
+    std::cout << "モーター: "
+              << printer.isMotorRunning()
               << std::endl;
 
     return 0;

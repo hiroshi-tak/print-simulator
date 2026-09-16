@@ -14,4 +14,8 @@ STOPPED --> PRINTING : startPrint()\n用紙あり
 
 STOPPED --> STOPPED : startPrint()\n用紙なし
 
+PRINTING --> ERROR : 紙詰まり検出
+
+ERROR --> IDLE : clearError()
+
 @enduml

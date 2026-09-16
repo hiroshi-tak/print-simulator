@@ -2,20 +2,31 @@
 
 class Printer {
     - state : PrinterState
+    - error : PrinterError
     - motor : Motor
     - sensor : Sensor
     - device : PrinterDevice*
+
     + Printer(device : PrinterDevice*)
     + startPrint() : void
     + stopPrint() : void
     + finishPrint() : void
+
     + getState() : PrinterState
+
+    + getError() : PrinterError
+    + setError(error : PrinterError) : void
+    + clearError() : void
+
     + isMotorRunning() : bool
+
     + setPaperDetected(detected : bool) : void
+    + setPaperJamDetected(detected : bool) : void
 }
 
 class Motor {
     - running : bool
+
     + Motor()
     + start() : void
     + stop() : void
@@ -24,14 +35,21 @@ class Motor {
 
 class Sensor {
     - paperDetected : bool
+    - paperJamDetected : bool
+
     + Sensor()
+
     + setPaperDetected(detected : bool) : void
     + isPaperDetected() : bool
+
+    + setPaperJamDetected(detected : bool) : void
+    + isPaperJamDetected() : bool
 }
 
 abstract class PrinterDevice {
     + PrinterDevice()
     + ~PrinterDevice()
+
     {abstract} + print() : void
     {abstract} + print(copies : int) : void
 }
@@ -52,9 +70,19 @@ enum PrinterState {
     IDLE
     PRINTING
     STOPPED
+    ERROR
+}
+
+enum PrinterError {
+    NONE
+    PAPER_JAM
+    NO_PAPER
+    INK_EMPTY
 }
 
 Printer --> PrinterState
+Printer --> PrinterError
+
 Printer *-- Motor
 Printer *-- Sensor
 Printer --> PrinterDevice

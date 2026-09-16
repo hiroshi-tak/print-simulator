@@ -8,6 +8,10 @@ public:
     void setPaperDetected(bool detected);
     bool isPaperDetected() const;
 
+    void setPaperJamDetected(bool detected);
+    bool isPaperJamDetected() const;
+
 private:
     bool paperDetected;
+    bool paperJamDetected;
 };
