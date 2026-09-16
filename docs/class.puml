@@ -1,0 +1,65 @@
+@startuml
+
+class Printer {
+    - state : PrinterState
+    - motor : Motor
+    - sensor : Sensor
+    - device : PrinterDevice*
+    + Printer(device : PrinterDevice*)
+    + startPrint() : void
+    + stopPrint() : void
+    + finishPrint() : void
+    + getState() : PrinterState
+    + isMotorRunning() : bool
+    + setPaperDetected(detected : bool) : void
+}
+
+class Motor {
+    - running : bool
+    + Motor()
+    + start() : void
+    + stop() : void
+    + isRunning() : bool
+}
+
+class Sensor {
+    - paperDetected : bool
+    + Sensor()
+    + setPaperDetected(detected : bool) : void
+    + isPaperDetected() : bool
+}
+
+abstract class PrinterDevice {
+    + PrinterDevice()
+    + ~PrinterDevice()
+    {abstract} + print() : void
+    {abstract} + print(copies : int) : void
+}
+
+class InkjetPrinter {
+    + InkjetPrinter()
+    + print() : void
+    + print(copies : int) : void
+}
+
+class LaserPrinter {
+    + LaserPrinter()
+    + print() : void
+    + print(copies : int) : void
+}
+
+enum PrinterState {
+    IDLE
+    PRINTING
+    STOPPED
+}
+
+Printer --> PrinterState
+Printer *-- Motor
+Printer *-- Sensor
+Printer --> PrinterDevice
+
+PrinterDevice <|-- InkjetPrinter
+PrinterDevice <|-- LaserPrinter
+
+@enduml

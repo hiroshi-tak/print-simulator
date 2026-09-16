@@ -1,0 +1,17 @@
+@startuml
+
+[*] --> IDLE
+
+IDLE --> PRINTING : startPrint()\n用紙あり
+
+IDLE --> IDLE : startPrint()\n用紙なし
+
+PRINTING --> STOPPED : stopPrint()
+
+PRINTING --> IDLE : finishPrint()
+
+STOPPED --> PRINTING : startPrint()\n用紙あり
+
+STOPPED --> STOPPED : startPrint()\n用紙なし
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+
+actor User
+
+participant Printer
+participant Sensor
+participant Motor
+participant "PrinterDevice*" as Device
+participant InkjetPrinter
+
+User -> Printer : startPrint()
+
+Printer -> Sensor : isPaperDetected()
+Sensor --> Printer : true
+
+Printer -> Motor : start()
+Motor -> Motor : running = true
+Motor --> Printer : return
+
+Printer -> Device : print()
+Device -> InkjetPrinter : print()
+InkjetPrinter --> Device : return
+Device --> Printer : return
+
+Printer --> User : 印刷開始
+
+User -> Printer : finishPrint()
+
+Printer -> Motor : stop()
+Motor -> Motor : running = false
+Motor --> Printer : return
+
+Printer -> Printer : state = IDLE
+
+Printer --> User : 印刷完了
+
+@enduml
