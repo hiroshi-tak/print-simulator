@@ -2,8 +2,11 @@
 
 #include "PrinterState.h"
 #include "PrinterError.h"
+#include "PrintJob.h"
+
 #include "hardware/Motor.h"
 #include "hardware/Sensor.h"
+#include "hardware/Timer.h"
 #include "device/PrinterDevice.h"
 
 class Printer
@@ -29,11 +32,23 @@ public:
     int getRemainingAmount() const;
     bool consumePrintAmount(int amount);
 
+    void createPrintJob(int copies);
+    bool executePrintJob();
+
+    int getTotalCopies() const;
+    int getRemainingCopies() const;
+
+    void startTimer(int seconds);
+    void tickTimer();
+
 private:
     PrinterState state;
     PrinterError error;
 
     Motor motor;
     Sensor sensor;
+    PrintJob printJob;
+    Timer timer;
+
     PrinterDevice *device;
 };

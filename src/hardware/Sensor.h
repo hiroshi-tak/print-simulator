@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 class Sensor
 {
 public:
@@ -14,4 +16,6 @@ public:
 private:
     bool paperDetected;
     bool paperJamDetected;
+
+    mutable std::mutex mutex;
 };

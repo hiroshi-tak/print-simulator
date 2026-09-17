@@ -1,8 +1,11 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 #include "printer/Printer.h"
 #include "device/InkjetPrinter.h"
 #include "device/LaserPrinter.h"
+#include "logger/Logger.h"
 
 const char *stateToString(PrinterState state)
 {
@@ -45,27 +48,102 @@ const char *errorToString(PrinterError error)
 
 }
 
+void runPrint(Printer &printer)
+{
+    printer.startTimer(1);
+
+    while (printer.getRemainingCopies() > 0)
+    {
+        // 1秒待つ
+        std::this_thread::sleep_for(
+            std::chrono::seconds(1));
+
+        // タイマー処理
+        printer.tickTimer();
+
+        // エラーチェック
+        if (printer.getState() == PrinterState::ERROR)
+        {
+            std::cout << std::endl;
+            std::cout << "=== エラー検出 ===" << std::endl;
+
+            std::cout << "エラー: "
+                      << errorToString(printer.getError())
+                      << std::endl;
+
+            // エラー復旧
+            std::cout << "=== エラー復旧 ==="
+                      << std::endl;
+
+            printer.setPaperJamDetected(false);
+            printer.clearError();
+
+            // 印刷再開
+            printer.startPrint();
+            printer.startTimer(1);
+
+            continue;
+        }
+
+        // 正常時の表示
+        std::cout << "1秒経過" << std::endl;
+
+        std::cout << "残り部数: "
+                  << printer.getRemainingCopies()
+                  << std::endl;
+
+        std::cout << "残量: "
+                  << printer.getRemainingAmount()
+                  << std::endl;
+
+        std::cout << "状態: "
+                  << stateToString(printer.getState())
+                  << std::endl;
+    }
+}
+
+void paperJamInterrupt(Printer &printer)
+{
+    std::this_thread::sleep_for(
+        std::chrono::seconds(3));
+
+    Logger::warning("紙詰まり割り込み発生");
+
+    printer.setPaperJamDetected(true);
+}
+
 int main()
 {
     InkjetPrinter inkjet;
     Printer printer(&inkjet);
 
     std::cout << "=== 初期状態 ==="
-                  << std::endl;
+              << std::endl;
 
     std::cout << "状態: "
               << stateToString(printer.getState())
               << std::endl;
 
-    std::cout << "エラー: "
-              << errorToString(printer.getError())
+    std::cout << "残量: "
+              << printer.getRemainingAmount()
               << std::endl;
 
     std::cout << std::endl;
 
-    // =========================
-    // 印刷開始
-    // =========================
+    std::cout << "=== 印刷ジョブ登録 ==="
+              << std::endl;
+
+    printer.createPrintJob(5);
+
+    std::cout << "総部数: "
+              << printer.getTotalCopies()
+              << std::endl;
+
+    std::cout << "残り部数: "
+              << printer.getRemainingCopies()
+              << std::endl;
+
+    std::cout << std::endl;
 
     std::cout << "=== 印刷開始 ==="
               << std::endl;
@@ -75,72 +153,18 @@ int main()
     std::cout << "状態: "
               << stateToString(printer.getState())
               << std::endl;
-
+    
     std::cout << "モーター: "
               << printer.isMotorRunning()
               << std::endl;
 
-    std::cout << "=== 残量確認 ==="
-              << std::endl;
+    std::thread jamThread(
+        paperJamInterrupt,
+        std::ref(printer));
 
-    std::cout << "残量: "
-              << printer.getRemainingAmount()
-              << std::endl;
+    runPrint(printer);
 
-    std::cout << std::endl;
-
-    // =========================
-    // 紙詰まり発生
-    // =========================
-
-    std::cout << "=== 紙詰まり発生 ==="
-              << std::endl;
-
-    printer.setPaperJamDetected(true);
-
-    std::cout << "状態: "
-              << stateToString(printer.getState())
-              << std::endl;
-
-    std::cout << "エラー: "
-              << errorToString(printer.getError())
-              << std::endl;
-
-    std::cout << "モーター: "
-              << printer.isMotorRunning()
-              << std::endl;
-
-    std::cout << std::endl;
-
-    // =========================
-    // エラー解除
-    // =========================
-
-    std::cout << "=== エラー解除 ==="
-              << std::endl;
-
-    printer.clearError();
-
-    std::cout << "状態: "
-              << stateToString(printer.getState())
-              << std::endl;
-
-    std::cout << "エラー: "
-              << errorToString(printer.getError())
-              << std::endl;
-
-    std::cout << "モーター: "
-              << printer.isMotorRunning()
-              << std::endl;
-
-    std::cout << "=== 印刷による消費 ==="
-              << std::endl;
-
-    printer.consumePrintAmount(50);
-
-    std::cout << "残量: "
-              << printer.getRemainingAmount()
-              << std::endl;
+    jamThread.join();
 
     return 0;
 }

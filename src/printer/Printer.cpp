@@ -1,4 +1,5 @@
 #include "Printer.h"
+#include "logger/Logger.h"
 
 Printer::Printer(PrinterDevice *device)
 {
@@ -14,10 +15,14 @@ void Printer::startPrint()
     {
         if (this->sensor.isPaperDetected())
         {
+            Logger::info("印刷を開始します");
+
             this->motor.start();
             this->state = PrinterState::PRINTING;
-
-            this->device->print();
+        }
+        else
+        {
+            Logger::warning("用紙がありません");
         }
     }
 }
@@ -59,8 +64,12 @@ void Printer::setError(PrinterError error)
 
 void Printer::clearError()
 {
+    this->sensor.setPaperJamDetected(false);
+
     this->error = PrinterError::NONE;
     this->state = PrinterState::IDLE;
+
+    Logger::info("エラーから復旧しました");
 }
 
 bool Printer::isMotorRunning() const
@@ -99,4 +108,82 @@ bool Printer::consumePrintAmount(int amount)
     this->device->consumeAmount(amount);
 
     return true;
+}
+
+void Printer::createPrintJob(int copies)
+{
+    this->printJob.create(copies);
+}
+
+bool Printer::executePrintJob()
+{
+    if (!this->printJob.hasJob())
+    {
+        return false;
+    }
+
+    if (this->state != PrinterState::PRINTING)
+    {
+        return false;
+    }
+
+    if (this->device->getRemainingAmount() <= 0)
+    {
+        this->setError(PrinterError::INK_EMPTY);
+        return false;
+    }
+
+    if (!this->printJob.printOne())
+    {
+        return false;
+    }
+
+    this->device->print();
+    this->device->consumeAmount(1);
+
+    return true;
+}
+
+int Printer::getTotalCopies() const
+{
+    return this->printJob.getTotalCopies();
+}
+
+int Printer::getRemainingCopies() const
+{
+    return this->printJob.getRemainingCopies();
+}
+
+void Printer::startTimer(int seconds)
+{
+    this->timer.start(seconds);
+}
+
+void Printer::tickTimer()
+{
+    this->timer.tick();
+
+    if (!this->timer.isExpired())
+    {
+        return;
+    }
+
+    // Sensorから紙詰まり状態を確認
+    if (this->sensor.isPaperJamDetected())
+    {
+        this->setError(PrinterError::PAPER_JAM);
+        return;
+    }
+
+    // 正常なら1部印刷
+    this->executePrintJob();
+
+    if (this->getRemainingCopies() == 0)
+    {
+        this->finishPrint();
+    }
+    else
+    {
+        this->timer.start(1);
+    }
 }

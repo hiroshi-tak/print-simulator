@@ -3,10 +3,24 @@
 actor User
 
 participant Printer
+participant PrintJob
 participant Sensor
 participant Motor
 participant "PrinterDevice*" as Device
 participant InkjetPrinter
+
+== 印刷ジョブ登録 ==
+
+User -> Printer : createPrintJob(5)
+
+Printer -> PrintJob : create(5)
+PrintJob -> PrintJob : totalCopies = 5
+PrintJob -> PrintJob : remainingCopies = 5
+PrintJob --> Printer : return
+
+Printer --> User : ジョブ登録完了
+
+== 印刷開始 ==
 
 User -> Printer : startPrint()
 
@@ -17,38 +31,40 @@ Printer -> Motor : start()
 Motor -> Motor : running = true
 Motor --> Printer : return
 
+Printer -> Printer : state = PRINTING
+
+Printer --> User : 印刷開始
+
+== 1部印刷 ==
+
+User -> Printer : executePrintJob()
+
+Printer -> PrintJob : hasJob()
+PrintJob --> Printer : true
+
+Printer -> PrintJob : printOne()
+PrintJob -> PrintJob : remainingCopies--
+PrintJob --> Printer : true
+
 Printer -> Device : print()
 Device -> InkjetPrinter : print()
 InkjetPrinter --> Device : return
 Device --> Printer : return
 
-Printer --> User : 印刷開始
+Printer -> Device : consumeAmount(1)
+Device -> InkjetPrinter : consumeAmount(1)
+InkjetPrinter -> InkjetPrinter : inkAmount--
+InkjetPrinter --> Device : return
+Device --> Printer : return
 
-== 紙詰まり発生 ==
+Printer --> User : 1部印刷完了
 
-User -> Printer : setPaperJamDetected(true)
+== 残り確認 ==
 
-Printer -> Sensor : setPaperJamDetected(true)
-Sensor -> Sensor : paperJamDetected = true
-Sensor --> Printer : return
+User -> Printer : getRemainingCopies()
 
-Printer -> Printer : setError(PAPER_JAM)
-
-Printer -> Motor : stop()
-Motor -> Motor : running = false
-Motor --> Printer : return
-
-Printer -> Printer : state = ERROR
-
-Printer --> User : 紙詰まり・印刷停止
-
-== エラー解除 ==
-
-User -> Printer : clearError()
-
-Printer -> Printer : error = NONE
-Printer -> Printer : state = IDLE
-
-Printer --> User : エラー解除
+Printer -> PrintJob : getRemainingCopies()
+PrintJob --> Printer : 4
+Printer --> User : 残り4部
 
 @enduml

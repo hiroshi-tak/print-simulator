@@ -5,6 +5,7 @@ class Printer {
     - error : PrinterError
     - motor : Motor
     - sensor : Sensor
+    - printJob : PrintJob
     - device : PrinterDevice*
 
     + Printer(device : PrinterDevice*)
@@ -22,6 +23,14 @@ class Printer {
 
     + setPaperDetected(detected : bool) : void
     + setPaperJamDetected(detected : bool) : void
+
+    + getRemainingAmount() : int
+    + consumePrintAmount(amount : int) : bool
+
+    + createPrintJob(copies : int) : void
+    + executePrintJob() : bool
+    + getTotalCopies() : int
+    + getRemainingCopies() : int
 }
 
 class Motor {
@@ -46,24 +55,47 @@ class Sensor {
     + isPaperJamDetected() : bool
 }
 
+class PrintJob {
+    - totalCopies : int
+    - remainingCopies : int
+
+    + PrintJob()
+    + create(copies : int) : void
+    + hasJob() : bool
+    + getTotalCopies() : int
+    + getRemainingCopies() : int
+    + printOne() : bool
+    + clear() : void
+}
+
 abstract class PrinterDevice {
     + PrinterDevice()
     + ~PrinterDevice()
 
     {abstract} + print() : void
     {abstract} + print(copies : int) : void
+    {abstract} + getRemainingAmount() : int
+    {abstract} + consumeAmount(amount : int) : void
 }
 
 class InkjetPrinter {
+    - inkAmount : int
+
     + InkjetPrinter()
     + print() : void
     + print(copies : int) : void
+    + getRemainingAmount() : int
+    + consumeAmount(amount : int) : void
 }
 
 class LaserPrinter {
+    - tonerAmount : int
+
     + LaserPrinter()
     + print() : void
     + print(copies : int) : void
+    + getRemainingAmount() : int
+    + consumeAmount(amount : int) : void
 }
 
 enum PrinterState {
@@ -85,6 +117,7 @@ Printer --> PrinterError
 
 Printer *-- Motor
 Printer *-- Sensor
+Printer *-- PrintJob
 Printer --> PrinterDevice
 
 PrinterDevice <|-- InkjetPrinter
