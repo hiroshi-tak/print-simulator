@@ -19,6 +19,8 @@ C++で作成した、架空の産業用プリンターを想定したシミュ�
 
 の2種類を用意し、共通インターフェースを利用して切り替えられる構造としています。
 
+また、紙詰まりを別スレッドから発生させ、センサーからの異常信号をPrinterが検出してエラー処理を行う構成としています。
+
 ---
 
 
@@ -37,10 +39,19 @@ C++で作成した、架空の産業用プリンターを想定したシミュ�
                          │
                       Printer
                    （プリンター制御）
-                    /          \
-                   /            \
-                Motor          Sensor
-              （モーター）     （用紙センサー）
+                         │ 
+        ┌────────────────┼────────────────┐ 
+        │                │                │ 
+        Motor         Sensor            Timer 
+     （モーター）    （用紙センサー）    （タイマー）
+                         │
+                      mutex
+                    （排他制御） 
+                        │
+                      PrintJob 
+                    （印刷ジョブ）
+
+
 ```
 
 ### Printer
@@ -55,7 +66,11 @@ C++で作成した、架空の産業用プリンターを想定したシミュ�
 * プリンター状態管理
 * モーター制御
 * 用紙センサー確認
+* 紙詰まり検出
+* 印刷ジョブ管理
 * 印刷方式への印刷指示
+* エラー検出・復旧
+* タイマー制御
 
 ### Motor
 
@@ -74,17 +89,52 @@ isRunning()
 ```cpp
 setPaperDetected()
 isPaperDetected()
+
+setPaperJamDetected()
+isPaperJamDetected()
 ```
 
 用紙が検出されていない場合、印刷を開始しないようにしています。
+紙詰まり状態は別スレッドから設定され、Printer側で検出します。
+また、複数スレッドからSensorへアクセスするため、std::mutexによる排他制御を行っています。
+
+### Timer
+
+印刷処理の時間経過を簡易的にシミュレーションします。
+
+```cpp
+start()
+stop()
+tick()
+isExpired()
+```
+
+実際の時間を直接管理するのではなく、tick()を呼び出すことで時間経過をシミュレーションしています。
+
+### PrintJob
+
+印刷ジョブの部数を管理します。
+
+```cpp
+create()
+hasJob()
+getTotalCopies()
+getRemainingCopies()
+printOne()
+clear()
+```
+
+総部数と残り部数を管理し、1部印刷するごとに残り部数を減らします。
 
 ### PrinterDevice
 
 印刷方式の共通インターフェースです。
 
 ```cpp
-virtual void print() = 0;
-virtual void print(int copies) = 0;
+virtual void print() = 0; 
+virtual void print(int copies) = 0; 
+virtual int getRemainingAmount() const = 0; 
+virtual void consumeAmount(int amount) = 0;
 ```
 
 ### InkjetPrinter
@@ -94,6 +144,18 @@ virtual void print(int copies) = 0;
 ### LaserPrinter
 
 `PrinterDevice`を継承したレーザー方式のプリンターです。
+
+### Logger
+
+システムの状態や異常をログとして出力します。
+
+```cpp
+Logger::info()
+Logger::warning()
+Logger::error()
+```
+
+ログレベルとして、INFO、WARNING、ERRORを使用しています。
 
 ---
 
@@ -167,6 +229,28 @@ device->print();
 
 これにより、印刷方式の違いを意識せずに共通のインターフェースから処理できます。
 
+
+### 6. マルチスレッド
+
+紙詰まりを別スレッドから発生させています。
+
+```cpp
+std::thread jamThread(
+    paperJamInterrupt,
+    std::ref(printer));
+```
+
+印刷処理とは独立したスレッドから紙詰まり信号を発生させることで、非同期に異常が発生する状況をシミュレーションしています。
+
+### 7. mutexによる排他制御
+
+メインスレッドと紙詰まりスレッドからSensorへアクセスするため、std::mutexによる排他制御を行っています。
+
+```cpp
+std::lock_guard<std::mutex> lock(this->mutex);
+```
+
+Sensorの状態を読み書きする処理をmutexで保護しています。
 ---
 
 ## プリンターの状態
@@ -178,7 +262,8 @@ enum class PrinterState
 {
     IDLE,
     PRINTING,
-    STOPPED
+    STOPPED,
+    ERROR
 };
 ```
 
@@ -202,8 +287,59 @@ PRINTING
     │ finishPrint()
     ▼
   IDLE
+
+PRINTING
+　　│
+　　│ 紙詰まり検出 
+　　▼
+　ERROR
+　　│ 
+　　│ clearError() 
+　　▼ 
+　IDLE
+
+```
+---
+
+## エラー処理
+
+現在、以下のエラーを定義しています。
+```cpp
+enum class PrinterError
+{
+    NONE,
+    PAPER_JAM,
+    NO_PAPER,
+    INK_EMPTY
+};
 ```
 
+紙詰まり発生時は、別スレッドからSensorへ紙詰まり信号を設定します。
+
+```text
+紙詰まり割り込み
+       │
+       ▼
+     Sensor
+       │
+       │ 紙詰まり状態
+       ▼
+    Printer
+       │
+       ▼
+     ERROR
+       │
+       │ エラー復旧
+       ▼
+      IDLE
+       │
+       │ 印刷再開
+       ▼
+   PRINTING
+
+エラー発生時にはモーターを停止し、エラー解除後に印刷を再開します。
+
+```
 ---
 
 ## 印刷開始処理
@@ -226,11 +362,30 @@ startPrint()
      │
      ▼
 状態をPRINTINGへ変更
-     │
-     ▼
-PrinterDevice::print()
+     
 ```
+---
+## ログ出力
 
+Loggerクラスを使用してログを出力します。
+
+```text
+[INFO]
+[WARNING]
+[ERROR]
+
+実行例：
+
+[INFO] 印刷を開始します
+[WARNING] 紙詰まり割り込み発生
+
+=== エラー検出 ===
+エラー: PAPER_JAM
+
+=== エラー復旧 ===
+[INFO] エラーから復旧しました
+[INFO] 印刷を開始します
+```
 ---
 
 ## ディレクトリ構成
@@ -244,6 +399,9 @@ printer-simulator/
 │   │   ├── Printer.h
 │   │   ├── Printer.cpp
 │   │   └── PrinterState.h
+│   │   ├── PrinterError.h
+│   │   ├── PrintJob.h
+│   │   └── PrintJob.cpp
 │   │
 │   ├── device/
 │   │   ├── PrinterDevice.h
@@ -253,11 +411,17 @@ printer-simulator/
 │   │   ├── LaserPrinter.h
 │   │   └── LaserPrinter.cpp
 │   │
-│   └── hardware/
-│       ├── Motor.h
-│       ├── Motor.cpp
-│       ├── Sensor.h
-│       └── Sensor.cpp
+│   ├── hardware/
+│   │   ├── Motor.h
+│   │   ├── Motor.cpp
+│   │   ├── Sensor.h
+│   │   ├── Sensor.cpp
+│   │   ├── Timer.h
+│   │   └── Timer.cpp
+│   │
+│   └── logger/
+│       ├── Logger.h
+│       └── Logger.cpp
 │
 ├── docs/
 │   └── uml/
@@ -280,16 +444,9 @@ cd ~/printer-simulator
 コンパイル：
 
 ```bash
-g++ -std=c++17 \
-    -Isrc \
-    src/main.cpp \
-    src/printer/Printer.cpp \
-    src/device/PrinterDevice.cpp \
-    src/device/InkjetPrinter.cpp \
-    src/device/LaserPrinter.cpp \
-    src/hardware/Motor.cpp \
-    src/hardware/Sensor.cpp \
-    -o build/printer
+rm -rf build/*
+cmake -S . -B build
+cmake --build build
 ```
 
 実行：
@@ -303,19 +460,42 @@ g++ -std=c++17 \
 ## 実行例
 
 ```text
-=== インクジェットプリンター ===
-初期状態: IDLE
-インクジェット方式で1部印刷します
-印刷状態: PRINTING
-モーター: 1
-印刷完了後: IDLE
+=== 初期状態 ===
+状態: IDLE
+残量: 100
 
-=== レーザープリンター ===
-レーザー方式で1部印刷します
-印刷状態: PRINTING
+=== 印刷ジョブ登録 ===
+総部数: 5
+残り部数: 5
+
+=== 印刷開始 ===
+[INFO] 印刷を開始します
+状態: PRINTING
 モーター: 1
-印刷完了後: IDLE
-```
+
+インクジェット方式で印刷します
+1秒経過
+残り部数: 4
+残量: 99
+
+インクジェット方式で印刷します
+1秒経過
+残り部数: 3
+残量: 98
+
+[WARNING] 紙詰まり割り込み発生
+
+=== エラー検出 ===
+エラー: PAPER_JAM
+
+=== エラー復旧 ===
+[INFO] エラーから復旧しました
+[INFO] 印刷を開始します
+
+インクジェット方式で印刷します
+1秒経過
+残り部数: 2
+残量: 97
 
 ---
 
@@ -351,18 +531,5 @@ docs/uml/
 
 ---
 
-## 今後の改善候補
 
-以下を検討します。
-
-* エラー状態の追加
-* 紙詰まり検出
-* インク・トナー残量管理
-* 印刷ジョブ管理
-* タイマーによる状態遷移
-* ログ出力
-* CMakeによるビルド環境整備
-* 単体テスト
-
----
 

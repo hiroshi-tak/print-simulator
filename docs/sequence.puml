@@ -6,18 +6,20 @@ participant Printer
 participant PrintJob
 participant Sensor
 participant Motor
+participant Timer
 participant "PrinterDevice*" as Device
 participant InkjetPrinter
+participant "Jam Thread" as JamThread
+participant Logger
 
 == 印刷ジョブ登録 ==
 
 User -> Printer : createPrintJob(5)
-
 Printer -> PrintJob : create(5)
-PrintJob -> PrintJob : totalCopies = 5
-PrintJob -> PrintJob : remainingCopies = 5
-PrintJob --> Printer : return
 
+PrintJob -> PrintJob : remainingCopies = 5
+
+PrintJob --> Printer : return
 Printer --> User : ジョブ登録完了
 
 == 印刷開始 ==
@@ -29,22 +31,68 @@ Sensor --> Printer : true
 
 Printer -> Motor : start()
 Motor -> Motor : running = true
-Motor --> Printer : return
+
+Printer -> Logger : info("印刷を開始します")
 
 Printer -> Printer : state = PRINTING
 
-Printer --> User : 印刷開始
+== 紙詰まり割り込み ==
 
-== 1部印刷 ==
+JamThread -> JamThread : 3秒待機
 
-User -> Printer : executePrintJob()
+JamThread -> Logger : warning("紙詰まり割り込み発生")
 
-Printer -> PrintJob : hasJob()
-PrintJob --> Printer : true
+JamThread -> Printer : setPaperJamDetected(true)
+Printer -> Sensor : setPaperJamDetected(true)
+
+Sensor -> Sensor : mutex lock
+Sensor -> Sensor : paperJamDetected = true
+Sensor -> Sensor : mutex unlock
+
+== タイマー処理 ==
+
+Printer -> Timer : tick()
+Timer --> Printer : expired
+
+Printer -> Sensor : isPaperJamDetected()
+
+Sensor -> Sensor : mutex lock
+Sensor --> Printer : true
+Sensor -> Sensor : mutex unlock
+
+Printer -> Printer : setError(PAPER_JAM)
+Printer -> Motor : stop()
+
+Printer -> Printer : state = ERROR
+
+== エラー復旧 ==
+
+Printer -> Printer : clearError()
+
+Printer -> Sensor : setPaperJamDetected(false)
+
+Sensor -> Sensor : mutex lock
+Sensor -> Sensor : paperJamDetected = false
+Sensor -> Sensor : mutex unlock
+
+Printer -> Logger : info("エラーから復旧しました")
+
+Printer -> Printer : state = IDLE
+
+Printer -> Printer : startPrint()
+
+Printer -> Motor : start()
+
+Printer -> Logger : info("印刷を開始します")
+
+Printer -> Timer : start(1)
+
+== 印刷再開 ==
+
+Printer -> Timer : tick()
 
 Printer -> PrintJob : printOne()
 PrintJob -> PrintJob : remainingCopies--
-PrintJob --> Printer : true
 
 Printer -> Device : print()
 Device -> InkjetPrinter : print()
@@ -52,19 +100,5 @@ InkjetPrinter --> Device : return
 Device --> Printer : return
 
 Printer -> Device : consumeAmount(1)
-Device -> InkjetPrinter : consumeAmount(1)
-InkjetPrinter -> InkjetPrinter : inkAmount--
-InkjetPrinter --> Device : return
-Device --> Printer : return
-
-Printer --> User : 1部印刷完了
-
-== 残り確認 ==
-
-User -> Printer : getRemainingCopies()
-
-Printer -> PrintJob : getRemainingCopies()
-PrintJob --> Printer : 4
-Printer --> User : 残り4部
 
 @enduml

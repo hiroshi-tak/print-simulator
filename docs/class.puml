@@ -31,6 +31,9 @@ class Printer {
     + executePrintJob() : bool
     + getTotalCopies() : int
     + getRemainingCopies() : int
+
+    + startTimer(seconds : int) : void
+    + tickTimer() : void
 }
 
 class Motor {
@@ -47,12 +50,21 @@ class Sensor {
     - paperJamDetected : bool
 
     + Sensor()
-
     + setPaperDetected(detected : bool) : void
     + isPaperDetected() : bool
-
     + setPaperJamDetected(detected : bool) : void
     + isPaperJamDetected() : bool
+}
+
+class Timer {
+    - running : bool
+    - remainingSeconds : int
+
+    + Timer()
+    + start(seconds : int) : void
+    + stop() : void
+    + tick() : void
+    + isExpired() : bool
 }
 
 class PrintJob {
@@ -98,6 +110,12 @@ class LaserPrinter {
     + consumeAmount(amount : int) : void
 }
 
+class Logger {
+    {static} + info(message : string) : void
+    {static} + warning(message : string) : void
+    {static} + error(message : string) : void
+}
+
 enum PrinterState {
     IDLE
     PRINTING
@@ -118,9 +136,19 @@ Printer --> PrinterError
 Printer *-- Motor
 Printer *-- Sensor
 Printer *-- PrintJob
+Printer *-- Timer
 Printer --> PrinterDevice
 
 PrinterDevice <|-- InkjetPrinter
 PrinterDevice <|-- LaserPrinter
+
+Printer ..> Logger
+Logger ..> LogLevel
+
+enum LogLevel {
+    INFO
+    WARNING
+    ERROR
+}
 
 @enduml
